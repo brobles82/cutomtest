@@ -157,33 +157,34 @@
         }
       });
       
-      // Force DOM to reflow and repaint before showing content
-      if (appliedRules.length > 0) {
-        console.log('[Visual Editor] Applied', appliedRules.length, 'rules, forcing DOM reflow...');
-        // Force reflow by accessing offsetHeight
-        document.body.offsetHeight;
-        
-        // Use requestAnimationFrame to ensure browser has processed all changes
-        return new Promise(function(resolve) {
-          if (window.requestAnimationFrame) {
+      console.log('[Visual Editor] Applied', appliedRules.length, 'rules, forcing DOM reflow...');
+      
+      // Always force DOM reflow and wait, regardless of rule count
+      // Force reflow by accessing offsetHeight
+      document.body.offsetHeight;
+      
+      // Use triple requestAnimationFrame for maximum reliability
+      return new Promise(function(resolve) {
+        if (window.requestAnimationFrame) {
+          window.requestAnimationFrame(function() {
+            // First RAF: Schedule for next frame
             window.requestAnimationFrame(function() {
-              // Double RAF to ensure all layout calculations are complete
+              // Second RAF: Ensure layout calculations are complete
               window.requestAnimationFrame(function() {
-                console.log('[Visual Editor] DOM modifications complete after reflow');
+                // Third RAF: Guarantee all DOM changes are fully processed
+                console.log('[Visual Editor] DOM modifications complete after triple RAF');
                 resolve();
               });
             });
-          } else {
-            // Fallback for older browsers
-            setTimeout(function() {
-              console.log('[Visual Editor] DOM modifications complete (fallback)');
-              resolve();
-            }, 50);
-          }
-        });
-      }
-      
-      return Promise.resolve();
+          });
+        } else {
+          // Fallback for older browsers
+          setTimeout(function() {
+            console.log('[Visual Editor] DOM modifications complete (fallback)');
+            resolve();
+          }, 100);
+        }
+      });
     },
     
     // Apply a rule directly without any recursive calls
@@ -346,20 +347,11 @@
         console.log('[Visual Editor] Loaded', self.rules.length, 'rules');
         
         // Apply all rules and wait for DOM modifications to complete
-        var applyPromise = self.applyAllRules();
-        
-        // Ensure applyPromise is a promise
-        if (applyPromise && typeof applyPromise.then === 'function') {
-          return applyPromise.then(function() {
-            // Show page only after all DOM modifications are complete
-            console.log('[Visual Editor] All rules applied, showing content...');
-            self.showElements();
-          });
-        } else {
-          // Fallback if applyAllRules doesn't return a promise
-          console.log('[Visual Editor] Rules applied synchronously, showing content...');
+        return self.applyAllRules().then(function() {
+          // Show page only after all DOM modifications are complete
+          console.log('[Visual Editor] All rules applied, showing content...');
           self.showElements();
-        }
+        });
       })
       .catch(function(error) {
         console.warn('[Visual Editor] Failed to load rules:', error);
