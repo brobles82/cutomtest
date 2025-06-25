@@ -144,15 +144,46 @@
       console.log('[Visual Editor] Applying all rules directly...');
       console.log('[Visual Editor] Evaluating', this.rules.length, 'rules for URL:', window.location.href);
       
+      var appliedRules = [];
+      
       this.rules.forEach(function(rule) {
         try {
           if (self.matchesRule(rule)) {
             self.applyRuleDirectly(rule);
+            appliedRules.push(rule);
           }
         } catch (error) {
           console.warn('[Visual Editor] Error applying rule:', rule.id, error);
         }
       });
+      
+      // Force DOM to reflow and repaint before showing content
+      if (appliedRules.length > 0) {
+        console.log('[Visual Editor] Applied', appliedRules.length, 'rules, forcing DOM reflow...');
+        // Force reflow by accessing offsetHeight
+        document.body.offsetHeight;
+        
+        // Use requestAnimationFrame to ensure browser has processed all changes
+        return new Promise(function(resolve) {
+          if (window.requestAnimationFrame) {
+            window.requestAnimationFrame(function() {
+              // Double RAF to ensure all layout calculations are complete
+              window.requestAnimationFrame(function() {
+                console.log('[Visual Editor] DOM modifications complete after reflow');
+                resolve();
+              });
+            });
+          } else {
+            // Fallback for older browsers
+            setTimeout(function() {
+              console.log('[Visual Editor] DOM modifications complete (fallback)');
+              resolve();
+            }, 50);
+          }
+        });
+      }
+      
+      return Promise.resolve();
     },
     
     // Apply a rule directly without any recursive calls
@@ -314,12 +345,21 @@
         self.rules = data.rules || [];
         console.log('[Visual Editor] Loaded', self.rules.length, 'rules');
         
-        // Apply all rules immediately while page is hidden
-        self.applyAllRules();
+        // Apply all rules and wait for DOM modifications to complete
+        var applyPromise = self.applyAllRules();
         
-        // Show page immediately after applying rules
-        // No delay needed since anti-flicker is handled synchronously
-        self.showElements();
+        // Ensure applyPromise is a promise
+        if (applyPromise && typeof applyPromise.then === 'function') {
+          return applyPromise.then(function() {
+            // Show page only after all DOM modifications are complete
+            console.log('[Visual Editor] All rules applied, showing content...');
+            self.showElements();
+          });
+        } else {
+          // Fallback if applyAllRules doesn't return a promise
+          console.log('[Visual Editor] Rules applied synchronously, showing content...');
+          self.showElements();
+        }
       })
       .catch(function(error) {
         console.warn('[Visual Editor] Failed to load rules:', error);
