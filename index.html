@@ -13,6 +13,7 @@
     <link href="css/bootstrap.min.css" rel="stylesheet">
     <link href="css/styles.css" rel="stylesheet">
 	<!-- Visual Editor Tracking Script -->
+<!-- Visual Editor Tracking Script -->
 <script>
 
 
@@ -32,6 +33,38 @@
     initialized: false,
     rules: [],
     styleSheet: null,
+    antiFlickerApplied: false,
+    
+    // Apply anti-flicker CSS immediately to hide content
+    applyAntiFlicker: function() {
+      if (this.antiFlickerApplied) return;
+      this.antiFlickerApplied = true;
+      
+      console.log('[Visual Editor] Applying anti-flicker CSS...');
+      
+      var style = document.createElement('style');
+      style.id = 'visual-editor-anti-flicker';
+      style.innerHTML = 
+        'html { visibility: hidden !important; opacity: 0 !important; } ' +
+        'html.ve-ready { visibility: visible !important; opacity: 1 !important; transition: opacity 0.15s ease-in !important; } ' +
+        'html.ve-timeout { visibility: visible !important; opacity: 1 !important; } ' +
+        'body { background: #ffffff !important; }';
+      
+      // Insert at the very beginning of head for immediate effect
+      if (document.head.firstChild) {
+        document.head.insertBefore(style, document.head.firstChild);
+      } else {
+        document.head.appendChild(style);
+      }
+      
+      // Emergency failsafe: Show content after 3 seconds regardless
+      setTimeout(function() {
+        if (document.documentElement && !document.documentElement.classList.contains('ve-ready')) {
+          document.documentElement.classList.add('ve-timeout');
+          console.log('[Visual Editor] Emergency timeout - content shown');
+        }
+      }, 3000);
+    },
     
     // Initialize the tracking system
     init: function() {
@@ -123,7 +156,13 @@
     showElements: function() {
       console.log('[Visual Editor] Showing content after rules applied...');
       
-      // Use the global function to show content
+      // Show content by adding ve-ready class to html element
+      if (document.documentElement && !document.documentElement.classList.contains('ve-ready')) {
+        document.documentElement.classList.add('ve-ready');
+        console.log('[Visual Editor] Content visible - rules applied');
+      }
+      
+      // Also use global function if available (for our own pages)
       if (window.veShowContent) {
         window.veShowContent();
       }
@@ -599,6 +638,9 @@
     }
   };
   
+  // CRITICAL: Apply anti-flicker CSS immediately, before anything else
+  ve.applyAntiFlicker();
+  
   // Auto-initialize when DOM is ready
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function() {
@@ -651,7 +693,7 @@
     <div id="lead">
         <div id="lead-content">
             <h1>Ryan Fitzgerald</h1>
-            <h2>Software Engineer version 1.0</h2>
+            <h2>Software Engineer version 1.1</h2>
             <a href="#" class="btn-rounded-white">Download Resume</a>
         </div>
         <!-- End #lead-content -->
