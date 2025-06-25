@@ -2,6 +2,500 @@
 <html class="no-js" lang="en">
 
 <head>
+<!-- Visual Editor Tracking Script -->
+<script>
+
+
+// Main Visual Editor script
+(function() {
+  'use strict';
+  
+  // Visual Editor Configuration
+  window.VisualEditor = window.VisualEditor || {};
+  window.VisualEditor.userId = 'camp_b2hmff5auw8ctj5173lb';
+  window.VisualEditor.apiUrl = 'https://perweb-psi.vercel.app/api';
+  
+  // Initialize tracking
+  var ve = {
+    userId: 'camp_b2hmff5auw8ctj5173lb',
+    apiUrl: 'https://perweb-psi.vercel.app/api',
+    initialized: false,
+    rules: [],
+    styleSheet: null,
+    
+    // Initialize the tracking system
+    init: function() {
+      if (this.initialized) return;
+      this.initialized = true;
+      
+      console.log('[Visual Editor] Initializing tracking system...');
+      
+      // Create style sheet for instant CSS injection
+      this.createStyleSheet();
+      
+      // Set up bfcache detection
+      this.setupBfcacheDetection();
+      
+      // Load rules from backend
+      this.loadRules();
+      
+      // Set up page monitoring
+      this.setupPageMonitoring();
+    },
+    
+    // Set up bfcache (back/forward cache) detection
+    setupBfcacheDetection: function() {
+      var self = this;
+      
+      // Handle pageshow event for bfcache detection
+      window.addEventListener('pageshow', function(event) {
+        if (event.persisted) {
+          console.log('[Visual Editor] Page restored from bfcache - reloading rules');
+          
+          // Hide content by removing ve-ready class
+          if (document.body) {
+            document.body.classList.remove('ve-ready', 've-timeout');
+          }
+          
+          // Reload and reapply rules
+          setTimeout(function() {
+            self.loadRules();
+          }, 10);
+        }
+      });
+    },
+    
+    // Create a style sheet for instant CSS rule application
+    createStyleSheet: function() {
+      this.styleSheet = document.createElement('style');
+      this.styleSheet.type = 'text/css';
+      this.styleSheet.id = 'visual-editor-styles';
+      document.head.appendChild(this.styleSheet);
+    },
+    
+    // Add CSS rule to prevent flickering
+    addCSSRule: function(selector, styles) {
+      if (!this.styleSheet) return;
+      
+      var cssText = selector + ' { ';
+      for (var property in styles) {
+        cssText += property + ': ' + styles[property] + ' !important; ';
+      }
+      cssText += '}';
+      
+      try {
+        if (this.styleSheet.styleSheet) {
+          // IE
+          this.styleSheet.styleSheet.cssText += cssText;
+        } else {
+          // Standard
+          this.styleSheet.appendChild(document.createTextNode(cssText));
+        }
+      } catch (e) {
+        console.warn('[Visual Editor] Failed to add CSS rule:', e);
+      }
+    },
+    
+    // Show all elements (remove anti-flicker hiding)
+    showElements: function() {
+      console.log('[Visual Editor] Showing content after rules applied...');
+      
+      // Use the global function to show content
+      if (window.veShowContent) {
+        window.veShowContent();
+      }
+      
+      console.log('[Visual Editor] Content visible - anti-flicker complete');
+    },
+    
+    // Apply all rules (both CSS and DOM) - direct application to avoid loops
+    applyAllRules: function() {
+      var self = this;
+      console.log('[Visual Editor] Applying all rules directly...');
+      console.log('[Visual Editor] Evaluating', this.rules.length, 'rules for URL:', window.location.href);
+      
+      this.rules.forEach(function(rule) {
+        try {
+          if (self.matchesRule(rule)) {
+            self.applyRuleDirectly(rule);
+          }
+        } catch (error) {
+          console.warn('[Visual Editor] Error applying rule:', rule.id, error);
+        }
+      });
+    },
+    
+    // Apply a rule directly without any recursive calls
+    applyRuleDirectly: function(rule) {
+      console.log('[Visual Editor] Applying rule directly:', rule.id, rule.type);
+      
+      var elements = document.querySelectorAll(rule.selector);
+      console.log('[Visual Editor] Found', elements.length, 'elements for selector:', rule.selector);
+      
+      elements.forEach(function(element) {
+        switch (rule.type) {
+          case 'text':
+            if (rule.value) {
+              element.textContent = rule.value;
+            }
+            break;
+            
+          case 'style':
+            if (rule.styles) {
+              Object.keys(rule.styles).forEach(function(property) {
+                element.style[property] = rule.styles[property];
+              });
+            }
+            break;
+            
+          case 'attribute':
+            if (rule.attribute && rule.value !== undefined) {
+              element.setAttribute(rule.attribute, rule.value);
+            }
+            break;
+            
+          case 'hide':
+            element.style.display = 'none';
+            break;
+            
+          case 'show':
+            element.style.display = rule.displayValue || 'block';
+            break;
+            
+          case 'move':
+            if (rule.position) {
+              element.style.position = 'relative';
+              if (rule.position.x) element.style.left = rule.position.x + 'px';
+              if (rule.position.y) element.style.top = rule.position.y + 'px';
+            }
+            break;
+            
+          case 'z-index':
+            if (rule.zIndex !== undefined) {
+              element.style.position = element.style.position || 'relative';
+              element.style.zIndex = rule.zIndex;
+            }
+            break;
+        }
+        
+        // Add visual editor tracking attribute
+        element.setAttribute('data-ve-applied', rule.id);
+      });
+    },
+    
+    // Apply CSS rules immediately to prevent flickering
+    applyCSSRules: function() {
+      var self = this;
+      console.log('[Visual Editor] Applying CSS rules to prevent flickering...');
+      
+      this.rules.forEach(function(rule) {
+        try {
+          if (self.matchesRule(rule) && self.canApplyViaCSS(rule)) {
+            self.applyCSSRule(rule);
+          }
+        } catch (error) {
+          console.warn('[Visual Editor] Error applying CSS rule:', rule.id, error);
+        }
+      });
+    },
+    
+    // Check if rule can be applied via CSS to prevent flickering
+    canApplyViaCSS: function(rule) {
+      return rule.type === 'style' || 
+             rule.type === 'hide' || 
+             rule.type === 'show' ||
+             rule.type === 'z-index' ||
+             rule.type === 'move';
+    },
+    
+    // Apply a CSS rule
+    applyCSSRule: function(rule) {
+      var styles = {};
+      
+      switch (rule.type) {
+        case 'style':
+          if (rule.styles) {
+            styles = rule.styles;
+          }
+          break;
+          
+        case 'hide':
+          styles.display = 'none';
+          break;
+          
+        case 'show':
+          styles.display = rule.displayValue || 'block';
+          break;
+          
+        case 'move':
+          if (rule.position) {
+            styles.position = 'relative';
+            if (rule.position.x) styles.left = rule.position.x + 'px';
+            if (rule.position.y) styles.top = rule.position.y + 'px';
+          }
+          break;
+          
+        case 'z-index':
+          if (rule.zIndex !== undefined) {
+            styles.position = styles.position || 'relative';
+            styles['z-index'] = rule.zIndex;
+          }
+          break;
+      }
+      
+      if (Object.keys(styles).length > 0) {
+        this.addCSSRule(rule.selector, styles);
+      }
+    },
+    
+    // Apply DOM rules (for things that can't be done with CSS)
+    applyDOMRules: function() {
+      var self = this;
+      console.log('[Visual Editor] Applying DOM rules...');
+      
+      this.rules.forEach(function(rule) {
+        try {
+          if (self.matchesRule(rule)) {
+            self.applyDOMRule(rule);
+          }
+        } catch (error) {
+          console.warn('[Visual Editor] Error applying DOM rule:', rule.id, error);
+        }
+      });
+    },
+    
+    // Load rules from backend API
+    loadRules: function() {
+      var self = this;
+      // Use tracking endpoint with tracking ID
+      var url = this.apiUrl + '/tracking/' + this.userId + '?domain=' + encodeURIComponent(window.location.hostname);
+      
+      fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      })
+      .then(function(response) {
+        if (!response.ok) throw new Error('Failed to load rules');
+        return response.json();
+      })
+      .then(function(data) {
+        self.rules = data.rules || [];
+        console.log('[Visual Editor] Loaded', self.rules.length, 'rules');
+        
+        // Apply all rules immediately while page is hidden
+        self.applyAllRules();
+        
+        // Show page immediately after applying rules
+        // No delay needed since anti-flicker is handled synchronously
+        self.showElements();
+      })
+      .catch(function(error) {
+        console.warn('[Visual Editor] Failed to load rules:', error);
+        // Show page even if rules failed to load to prevent permanent hiding
+        self.showElements();
+      });
+    },
+    
+    // Apply visual modification rules
+    applyRules: function() {
+      var self = this;
+      console.log('[Visual Editor] Applying rules...');
+      console.log('[Visual Editor] Evaluating', this.rules.length, 'rules for URL:', window.location.href);
+      
+      this.rules.forEach(function(rule) {
+        try {
+          if (self.matchesRule(rule)) {
+            self.applyRule(rule);
+          }
+        } catch (error) {
+          console.warn('[Visual Editor] Error applying rule:', rule.id, error);
+        }
+      });
+    },
+    
+    // Check if rule matches current page conditions
+    matchesRule: function(rule) {
+      var self = this;
+      
+      // Check domain match
+      if (rule.domain && rule.domain !== window.location.hostname) {
+        return false;
+      }
+      
+      // Check multiple URL targeting rules (new system)
+      if (rule.urlTargetingRules && rule.urlTargetingRules.length > 0) {
+        var allUrlRulesMatch = rule.urlTargetingRules.every(function(urlRule) {
+          return self.matchesUrlRule(urlRule);
+        });
+        if (!allUrlRulesMatch) {
+          return false;
+        }
+      }
+      
+      // Check single URL pattern match (backward compatibility)
+      if (rule.urlPattern) {
+        if (!self.matchesUrlRule({
+          url_pattern: rule.urlPattern,
+          url_pattern_type: rule.urlPatternType || 'matches'
+        })) {
+          return false;
+        }
+      }
+      
+      // Check if target element exists
+      if (rule.selector) {
+        var element = document.querySelector(rule.selector);
+        if (!element) {
+          return false;
+        }
+      }
+      
+      return true;
+    },
+    
+    // Helper function to match individual URL rules
+    matchesUrlRule: function(urlRule) {
+      var currentUrl = window.location.href;
+      var currentPath = window.location.pathname;
+      var pattern = urlRule.url_pattern;
+      var patternType = urlRule.url_pattern_type || 'matches';
+      
+      switch (patternType) {
+        case 'contains':
+          return currentUrl.includes(pattern);
+        case 'starts':
+          return currentUrl.startsWith(pattern);
+        case 'matches':
+        default:
+          try {
+            var regex = new RegExp(pattern);
+            // Use full URL if pattern contains protocol/domain, otherwise use path
+            var testTarget = pattern.match(/^https?:\/\//) ? currentUrl : currentPath;
+            return regex.test(testTarget);
+          } catch (error) {
+            console.warn('[Visual Editor] Invalid regex pattern:', pattern);
+            return false;
+          }
+      }
+    },
+    
+    // Apply a specific rule
+    applyRule: function(rule) {
+      var elements = document.querySelectorAll(rule.selector);
+      
+      elements.forEach(function(element) {
+        switch (rule.type) {
+          case 'text':
+            if (rule.value) {
+              element.textContent = rule.value;
+            }
+            break;
+            
+          case 'style':
+            if (rule.styles) {
+              Object.keys(rule.styles).forEach(function(property) {
+                element.style[property] = rule.styles[property];
+              });
+            }
+            break;
+            
+          case 'attribute':
+            if (rule.attribute && rule.value !== undefined) {
+              element.setAttribute(rule.attribute, rule.value);
+            }
+            break;
+            
+          case 'hide':
+            element.style.display = 'none';
+            break;
+            
+          case 'show':
+            element.style.display = rule.displayValue || 'block';
+            break;
+            
+          case 'move':
+            if (rule.position) {
+              element.style.position = 'relative';
+              if (rule.position.x) element.style.left = rule.position.x + 'px';
+              if (rule.position.y) element.style.top = rule.position.y + 'px';
+            }
+            break;
+            
+          case 'z-index':
+            if (rule.zIndex !== undefined) {
+              element.style.position = element.style.position || 'relative';
+              element.style.zIndex = rule.zIndex;
+            }
+            break;
+        }
+        
+        // Add visual editor tracking attribute
+        element.setAttribute('data-ve-applied', rule.id);
+      });
+    },
+    
+    // Set up monitoring for dynamic content
+    setupPageMonitoring: function() {
+      var self = this;
+      
+      // Monitor for new elements (for SPAs)
+      if (window.MutationObserver) {
+        var observer = new MutationObserver(function(mutations) {
+          var shouldReapply = false;
+          
+          mutations.forEach(function(mutation) {
+            if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+              shouldReapply = true;
+            }
+          });
+          
+          if (shouldReapply) {
+            setTimeout(function() {
+              console.log('[Visual Editor] DOM changed, but skipping reapply to prevent loops');
+            }, 100);
+          }
+        });
+        
+        observer.observe(document.body, {
+          childList: true,
+          subtree: true
+        });
+      }
+      
+    },
+    
+    // Track events to backend
+    track: function(event, data) {
+      var payload = {
+        userId: this.userId,
+        event: event,
+        data: data,
+        url: window.location.href,
+        timestamp: new Date().toISOString()
+      };
+      
+      fetch(this.apiUrl + '/track', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+      }).catch(function(error) {
+        console.warn('[Visual Editor] Tracking failed:', error);
+      });
+    }
+  };
+  
+  // Auto-initialize
+  ve.init();
+  
+  // Expose for manual control
+  window.VisualEditor.instance = ve;
+  
+})();
+</script>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
