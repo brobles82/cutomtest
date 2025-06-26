@@ -13,7 +13,6 @@
     <link href="css/bootstrap.min.css" rel="stylesheet">
     <link href="css/styles.css" rel="stylesheet">
 	<!-- Visual Editor Tracking Script -->
-<!-- Visual Editor Tracking Script -->
 <script>
 
 
@@ -277,10 +276,16 @@
               element.style.zIndex = rule.zIndex;
             }
             break;
+            
+          case 'remove':
+            element.remove();
+            break;
         }
         
-        // Add visual editor tracking attribute
-        element.setAttribute('data-ve-applied', rule.id);
+        // Add visual editor tracking attribute (only if element wasn't removed)
+        if (rule.type !== 'remove') {
+          element.setAttribute('data-ve-applied', rule.id);
+        }
       });
     },
     
@@ -530,10 +535,16 @@
               element.style.zIndex = rule.zIndex;
             }
             break;
+            
+          case 'remove':
+            element.remove();
+            break;
         }
         
-        // Add visual editor tracking attribute
-        element.setAttribute('data-ve-applied', rule.id);
+        // Add visual editor tracking attribute (only if element wasn't removed)
+        if (rule.type !== 'remove') {
+          element.setAttribute('data-ve-applied', rule.id);
+        }
       });
     },
     
